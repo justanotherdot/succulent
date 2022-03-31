@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
   "net/http"
+  "os"
   "log"
 )
 
@@ -12,12 +13,15 @@ const MaxInt = int(MaxUint >> 1)
 const MinInt = -MaxInt - 1
 
 func main() {
+    port := os.Getenv("PORT")
+
     http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
         fmt.Fprintf(w, "works")
     })
 
-    fmt.Printf("Starting server at port 8080\n")
-    if err := http.ListenAndServe(":8080", nil); err != nil {
+    fmt.Printf("Starting server at port %v\n", port)
+    portString := fmt.Sprintf(":%v", port);
+    if err := http.ListenAndServe(portString, nil); err != nil {
         log.Fatal(err)
     }
 }
