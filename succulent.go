@@ -2,9 +2,19 @@ package main
 
 import (
 	"fmt"
-  "net/http"
   "os"
   "log"
+	"context"
+	"io/ioutil"
+	"net/http"
+	"strconv"
+	"sync"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 const MaxUint = ^uint(0)
@@ -12,27 +22,31 @@ const MinUint = 0
 const MaxInt = int(MaxUint >> 1)
 const MinInt = -MaxInt - 1
 
+//export HONEYCOMB_API_KEY=goes-here
+//export HONEYCOMB_DATASET=toy
+//export SERVICE_NAME=succulent
+
 func main() {
     ctx := context.Background()
     hny := InitializeTracing(ctx)
     defer hny.Shutdown(ctx) // let the exporter send all queued traces, after everything else in this block completes
 
-
     mux := http.NewServeMux()
     mux.Handle("/", otelhttp.NewHandler(otelhttp.WithRouteTag("/", http.HandlerFunc(rootHandler)), "root", otelhttp.WithPublicEndpoint()))
-    mux.Handle("/sequence.js", otelhttp.NewHandler(otelhttp.WithRouteTag("/sequence.js", http.HandlerFunc(jsHandler)), "sequence-js", otelhttp.WithPublicEndpoint()))
-    mux.Handle("/fib", otelhttp.NewHandler(otelhttp.WithRouteTag("/fib", http.HandlerFunc(fibHandler)), "fibonacci", otelhttp.WithPublicEndpoint()))
-    mux.Handle("/fibinternal", otelhttp.NewHandler(otelhttp.WithRouteTag("/fibinternal", http.HandlerFunc(fibHandler)), "fibonacci"))
+    mux.Handle("/dumb", otelhttp.NewHandler(otelhttp.WithRouteTag("/dumb", http.HandlerFunc(dumbHandler)), "dumb", otelhttp.WithPublicEndpoint()))
+    //mux.Handle("/sequence.js", otelhttp.NewHandler(otelhttp.WithRouteTag("/sequence.js", http.HandlerFunc(jsHandler)), "sequence-js", otelhttp.WithPublicEndpoint()))
+    //mux.Handle("/fib", otelhttp.NewHandler(otelhttp.WithRouteTag("/fib", http.HandlerFunc(fibHandler)), "fibonacci", otelhttp.WithPublicEndpoint()))
+    //mux.Handle("/fibinternal", otelhttp.NewHandler(otelhttp.WithRouteTag("/fibinternal", http.HandlerFunc(fibHandler)), "fibonacci"))
 
-    fmt.Printf("Starting server at port %v\n", port)
     port := os.Getenv("PORT")
+    fmt.Printf("Starting server at port %v\n", port)
     portString := fmt.Sprintf(":%v", port);
     if err := http.ListenAndServe(portString, mux); err != nil {
         log.Fatalf("server: %s", err)
     }
 }
 
-func rootHandler(w http.ResponseWriter, r *http.Request) {
+func dumbHandler(w http.ResponseWriter, req *http.Request) {
     fmt.Fprintf(w, "works")
 }
 
